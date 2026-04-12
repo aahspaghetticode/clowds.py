@@ -80,28 +80,41 @@ BAD_ALERTS = [
     "Gale Warning", "Gale Watch",
     "Hurricane Force Wind Warning", "Hurricane Force Wind Watch",
 ]
-
+danger_reasons = []
 def check_alerts(lat, lon):
     url = f"https://api.weather.gov/alerts/active?point={lat},{lon}"
     response = requests.get(url, headers={"User-Agent": "clowds.py"})
     alerts = response.json()["features"]
     
+    seen = set()
+    alert_points = 0
+
     for alert in alerts:
         event = alert["properties"]["event"]
         if event in BAD_ALERTS:
             print("OH SHIT TAKE COVER!!! NO BIKING!!!")
             quit()
-check_alerts(location[0], location[1])
+        if event not in seen:
+            seen.add(event)
+            #only count as 0.5 points, most not in bad-alerts are like, wind advisorys
+            alert_points -= 0.5
+            description = alert["properties"].get("description", event)
+            #also why tf is \n in the api output lol
+            first_sentence = description.replace("\n", " ").split(".")[0].strip()
+            danger_reasons.append(f"NWS Alert: {first_sentence}")
+    
+    return alert_points
+danger_level = check_alerts(location[0], location[1])
 #Is the current weather appropriate(prob spelled diffrently lol) for biking?
-danger_reasons = []
+
 if not current_is_day: danger_reasons.append("It's dark out")
 if current_temperature_2m > 80: danger_reasons.append("It's hot")
 elif current_temperature_2m < 60: danger_reasons.append("It's cold")
 if current_rain > 0 or current_showers > 0: danger_reasons.append("It's raining")
-danger_level = len(danger_reasons)
+danger_level += len(danger_reasons)
 if danger_level == 0: overveiw = "It's perfect outside! Have fun!"
-elif danger_level == 1: overveiw = "Bike with caution... Dangers: "
+elif danger_level <= 2: overveiw = "Bike with caution... Dangers: "
 else: overveiw = "Nope. Dangers: "
-print(overveiw, str(danger_reasons)[1:-1])
+print(overveiw, "and ".join(str(danger_reasons).replace("'", "").rsplit(", ", 1))[1:-1], "\n\"danger points\" (the less the merrier):", danger_level)
 print("""SOURCE: api.weather.gov, open-meteo.com
 made with <3 from h3nw :)""")
