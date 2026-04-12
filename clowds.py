@@ -1,3 +1,28 @@
+#if not opened in tty
+import sys
+import os
+import subprocess
+
+def ensure_terminal():
+    if sys.stdout.isatty():
+        return  # already in a terminal, do nothing
+    
+    # Not in a terminal, relaunch in one
+    script = os.path.abspath(__file__)
+    
+    # Try common terminal emulators
+    for terminal in ["gnome-terminal", "konsole", "xterm", "alacritty", "kitty"]:
+        try:
+            subprocess.Popen([terminal, "--", "bash", "-c", f"python3 {script}; read -p 'Press enter to exit...'"])
+            sys.exit()
+        except FileNotFoundError:
+            continue
+    
+    print("Couldn't find a terminal emulator!")
+    sys.exit(1)
+
+ensure_terminal()
+#get location
 import geocoder
 g = geocoder.ip('me')
 print("Estimated location:", g.latlng)
@@ -30,10 +55,30 @@ current_rain = current.Variables(3).Value()
 import requests
 BAD_ALERTS = [
     "Tornado Warning", "Tornado Watch",
-    "Thunderstorm Warning", "Severe Thunderstorm Warning", "Severe Thunderstorm Watch",
+    "Severe Thunderstorm Warning", "Severe Thunderstorm Watch",
     "Flash Flood Warning", "Flash Flood Watch",
-    "Extreme Wind Warning", "Hurricane Warning", "Hurricane Watch",
-    "Blizzard Warning", "Ice Storm Warning",
+    "Flood Warning", "Flood Watch",
+    "Extreme Wind Warning",
+    "High Wind Warning", "High Wind Watch",
+    "Hurricane Warning", "Hurricane Watch",
+    "Typhoon Warning", "Typhoon Watch",
+    "Tropical Storm Warning", "Tropical Storm Watch",
+    "Blizzard Warning",
+    "Ice Storm Warning",
+    "Snow Squall Warning",
+    "Dust Storm Warning",
+    "Extreme Heat Warning",
+    "Extreme Cold Warning",
+    "Tsunami Warning", "Tsunami Watch",  # if you live near water i guess
+    "Shelter In Place Warning",
+    "Evacuation Immediate",
+    #doesnt really apply to me (chicagoland area) but eh why not
+    "Coastal Flood Warning", "Coastal Flood Watch",
+    "Lakeshore Flood Warning", "Lakeshore Flood Watch",
+    "Storm Surge Warning", "Storm Surge Watch",
+    "Hazardous Seas Warning", "Hazardous Seas Watch",
+    "Gale Warning", "Gale Watch",
+    "Hurricane Force Wind Warning", "Hurricane Force Wind Watch",
 ]
 
 def check_alerts(lat, lon):
@@ -46,14 +91,17 @@ def check_alerts(lat, lon):
         if event in BAD_ALERTS:
             print("OH SHIT TAKE COVER!!! NO BIKING!!!")
             quit()
+check_alerts(location[0], location[1])
 #Is the current weather appropriate(prob spelled diffrently lol) for biking?
 danger_reasons = []
-if not current_is_day: danger_reasons += "It's dark out"
-if current_temperature_2m > 80: danger_reasons += "It's hot"
-elif current_temperature_2m < 60: danger_reasons += "It's cold"
-if current_rain > 0 or current_showers > 0: danger_reasons += "It's raining"
+if not current_is_day: danger_reasons.append("It's dark out")
+if current_temperature_2m > 80: danger_reasons.append("It's hot")
+elif current_temperature_2m < 60: danger_reasons.append("It's cold")
+if current_rain > 0 or current_showers > 0: danger_reasons.append("It's raining")
 danger_level = len(danger_reasons)
 if danger_level == 0: overveiw = "It's perfect outside! Have fun!"
 elif danger_level == 1: overveiw = "Bike with caution... Dangers: "
 else: overveiw = "Nope. Dangers: "
 print(overveiw, str(danger_reasons)[1:-1])
+print("""SOURCE: api.weather.gov, open-meteo.com
+made with <3 from h3nw :)""")
