@@ -1,2 +1,2 @@
 # clowds.py
-is it ok to go biking?
+is it ok to go biking right now?
