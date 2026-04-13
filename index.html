@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>clowds</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #f5f5f2;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    border: 0.5px solid rgba(0,0,0,0.12);
+    padding: 2rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+  }
+  h1 { font-size: 28px; font-weight: 500; color: #1a1a1a; letter-spacing: -0.5px; }
+  .subtitle { font-size: 13px; color: #888; margin-top: 4px; }
+  .status-area { margin: 2rem 0; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .big-verdict { font-size: 22px; font-weight: 500; margin-bottom: 1rem; line-height: 1.3; }
+  .verdict-go { color: #1D9E75; }
+  .verdict-caution { color: #BA7517; }
+  .verdict-nope { color: #E24B4A; }
+  .verdict-danger { color: #A32D2D; font-size: 26px; }
+  .dangers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 0.5rem; }
+  .danger-pill { background: #FAEEDA; color: #633806; font-size: 12px; padding: 4px 10px; border-radius: 20px; }
+  .alert-pill { background: #FCEBEB; color: #501313; font-size: 12px; padding: 4px 10px; border-radius: 20px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 1.5rem 0; text-align: left; }
+  .stat { background: #f5f5f2; border-radius: 8px; padding: 12px; }
+  .stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .stat-value { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+  .points-row { font-size: 13px; color: #888; margin-top: 1rem; }
+  .points-row span { font-weight: 500; color: #1a1a1a; }
+  #check-btn {
+    background: #1a1a1a; color: #fff; border: none; border-radius: 10px;
+    padding: 12px 28px; font-size: 15px; font-weight: 500; cursor: pointer;
+    margin-top: 1rem; transition: opacity 0.15s;
+  }
+  #check-btn:hover { opacity: 0.82; }
+  #check-btn:disabled { opacity: 0.4; cursor: default; }
+  .manual-btn {
+    background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
+    padding: 9px 20px; font-size: 14px; cursor: pointer; margin-top: 10px;
+    transition: opacity 0.15s;
+  }
+  .manual-btn:hover { opacity: 0.82; }
+  .loading { color: #888; font-size: 15px; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .error-msg { color: #E24B4A; font-size: 14px; line-height: 1.6; margin-bottom: 0.75rem; }
+  .source { font-size: 11px; color: #bbb; margin-top: 1.5rem; }
+  .source a { color: #bbb; }
+  .location-line { font-size: 12px; color: #bbb; margin-top: 6px; }
+  .link-btn {
+    background: transparent; color: #888; border: 0.5px solid #ccc;
+    border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer;
+    transition: background 0.15s, color 0.15s; display: inline-flex; align-items: center;
+  }
+  .link-btn:hover { background: #f0f0ed; color: #1a1a1a; border-color: #aaa; }
+  input[type=number] {
+    width: 130px; padding: 8px 10px; border: 0.5px solid #ccc;
+    border-radius: 8px; font-size: 14px; text-align: center; color: #1a1a1a;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>clowds</h1>
+  <p class="subtitle">should you bike today?</p>
+
+  <div class="status-area" id="status-area">
+    <p style="color:#bbb;font-size:14px;">tap check to get started</p>
+  </div>
+
+  <div id="stats-area" style="display:none;">
+    <div class="stats">
+      <div class="stat"><div class="stat-label">temperature</div><div class="stat-value" id="stat-temp">—</div></div>
+      <div class="stat"><div class="stat-label">conditions</div><div class="stat-value" id="stat-cond">—</div></div>
+      <div class="stat"><div class="stat-label">time of day</div><div class="stat-value" id="stat-day">—</div></div>
+      <div class="stat"><div class="stat-label">precipitation</div><div class="stat-value" id="stat-rain">—</div></div>
+    </div>
+    <div class="points-row">danger points: <span id="stat-points">—</span> &nbsp;(lower = better)</div>
+  </div>
+
+  <button id="check-btn" onclick="runCheck()">check weather</button>
+  <div class="location-line" id="loc-line"></div>
+  <div style="display:flex;gap:8px;justify-content:center;margin-top:1.25rem;">
+    <a href="https://github.com/aahspaghetticode/clowds.py" target="_blank" style="text-decoration:none;">
+      <button class="link-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:5px;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        github
+      </button>
+    </a>
+    <a href="https://raw.githubusercontent.com/aahspaghetticode/clowds.py/main/clowds.py" target="_blank" download="clowds.py" style="text-decoration:none;">
+      <button class="link-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        clowds.py
+      </button>
+    </a>
+  </div>
+  <p class="source" style="margin-top:1rem;">
+    data: <a href="https://open-meteo.com" target="_blank">open-meteo.com</a> &amp;
+    <a href="https://api.weather.gov" target="_blank">api.weather.gov</a><br>
+    made with &lt;3 from h3nw :)
+  </p>
+</div>
+
+<script>
+const BAD_ALERTS = new Set([
+  "Tornado Warning","Tornado Watch",
+  "Severe Thunderstorm Warning","Severe Thunderstorm Watch",
+  "Flash Flood Warning","Flash Flood Watch",
+  "Flood Warning","Flood Watch",
+  "Extreme Wind Warning",
+  "High Wind Warning","High Wind Watch",
+  "Hurricane Warning","Hurricane Watch",
+  "Typhoon Warning","Typhoon Watch",
+  "Tropical Storm Warning","Tropical Storm Watch",
+  "Blizzard Warning","Ice Storm Warning","Snow Squall Warning",
+  "Dust Storm Warning","Extreme Heat Warning","Extreme Cold Warning",
+  "Tsunami Warning","Tsunami Watch",
+  "Shelter In Place Warning","Evacuation Immediate",
+  "Coastal Flood Warning","Coastal Flood Watch",
+  "Lakeshore Flood Warning","Lakeshore Flood Watch",
+  "Storm Surge Warning","Storm Surge Watch",
+  "Hazardous Seas Warning","Hazardous Seas Watch",
+  "Gale Warning","Gale Watch",
+  "Hurricane Force Wind Warning","Hurricane Force Wind Watch",
+]);
+
+function setStatus(html) {
+  document.getElementById('status-area').innerHTML = html;
+}
+
+function setBtn(label, disabled) {
+  const btn = document.getElementById('check-btn');
+  btn.textContent = label;
+  btn.disabled = !!disabled;
+}
+
+function useManual() {
+  const lat = parseFloat(document.getElementById('man-lat').value);
+  const lon = parseFloat(document.getElementById('man-lon').value);
+  if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    alert('please enter valid coordinates (lat: -90 to 90, lon: -180 to 180)');
+    return;
+  }
+  document.getElementById('loc-line').textContent = `manual: ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+  fetchWeather(lat, lon);
+}
+
+async function runCheck() {
+  setBtn('checking…', true);
+  document.getElementById('stats-area').style.display = 'none';
+  setStatus('<p class="loading">getting your location…</p>');
+
+  let lat = null, lon = null, locLabel = '';
+
+  // 1. Browser Geolocation API
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
+    );
+    lat = pos.coords.latitude;
+    lon = pos.coords.longitude;
+    locLabel = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+  } catch (_) {}
+
+  // 2. ip-api.com — no API key required, CORS-friendly
+  if (lat === null) {
+    try {
+      const geo = await fetch('http://ip-api.com/json/?fields=status,lat,lon').then(r => r.json());
+      if (geo.status === 'success') {
+        lat = geo.lat;
+        lon = geo.lon;
+        locLabel = `approx: ${lat.toFixed(3)}, ${lon.toFixed(3)} (ip-based)`;
+      }
+    } catch (_) {}
+  }
+
+  // 3. Manual coordinate entry fallback
+  if (lat === null) {
+    setStatus(`
+      <p class="error-msg">couldn't auto-detect your location.<br>enter coordinates manually:</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <input id="man-lat" type="number" step="any" placeholder="latitude">
+        <input id="man-lon" type="number" step="any" placeholder="longitude">
+      </div>
+      <button class="manual-btn" onclick="useManual()">use these</button>
+      <p style="font-size:11px;color:#aaa;margin-top:8px;">
+        find yours at <a href="https://www.latlong.net" target="_blank" style="color:#aaa;">latlong.net</a>
+      </p>
+    `);
+    setBtn('recheck', false);
+    return;
+  }
+
+  document.getElementById('loc-line').textContent = locLabel;
+  fetchWeather(lat, lon);
+}
+
+async function fetchWeather(lat, lon) {
+  setBtn('checking…', true);
+  document.getElementById('stats-area').style.display = 'none';
+  setStatus('<p class="loading">fetching weather…</p>');
+
+  let cur;
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=is_day,temperature_2m,showers,rain&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch`;
+    const data = await fetch(url).then(r => r.json());
+    cur = data.current;
+  } catch {
+    setStatus('<p class="error-msg">couldn\'t fetch weather data. check your connection.</p>');
+    setBtn('try again', false);
+    return;
+  }
+
+  const isDay   = !!cur.is_day;
+  const temp    = cur.temperature_2m;
+  const rain    = cur.rain;
+  const showers = cur.showers;
+
+  setStatus('<p class="loading">checking NWS alerts…</p>');
+
+  let dangerPoints = 0;
+  const dangerReasons = [];
+  const alertPills = [];
+  let ohShit = false;
+
+  try {
+    const alertUrl = `https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`;
+    const alertData = await fetch(alertUrl, { headers: { 'User-Agent': 'clowds.html' } }).then(r => r.json());
+    const seen = new Set();
+    for (const feature of (alertData.features || [])) {
+      const event = feature.properties.event;
+      if (BAD_ALERTS.has(event)) { ohShit = true; break; }
+      if (!seen.has(event)) {
+        seen.add(event);
+        dangerPoints -= 0.5;
+        const desc = (feature.properties.description || event).replace(/\n/g, ' ');
+        const first = desc.split('.')[0].trim();
+        alertPills.push(`NWS: ${first.length > 60 ? first.slice(0, 57) + '…' : first}`);
+      }
+    }
+  } catch (_) {}
+
+  if (ohShit) {
+    setStatus('<p class="big-verdict verdict-danger">OH SHIT TAKE COVER!!!</p><p style="color:#A32D2D;font-size:15px;">no biking. active severe weather warning.</p>');
+    setBtn('recheck', false);
+    return;
+  }
+
+  if (!isDay)                    { dangerReasons.push("it's dark out"); dangerPoints++; }
+  if (temp > 80)                 { dangerReasons.push("it's hot");      dangerPoints++; }
+  else if (temp < 60)            { dangerReasons.push("it's cold");     dangerPoints++; }
+  if (rain > 0 || showers > 0)  { dangerReasons.push("it's raining");  dangerPoints++; }
+
+  document.getElementById('stat-temp').textContent   = `${Math.round(temp)}°F`;
+  document.getElementById('stat-cond').textContent   = (rain > 0 || showers > 0) ? 'rainy' : (isDay ? 'clear' : 'clear (night)');
+  document.getElementById('stat-day').textContent    = isDay ? 'daytime' : 'nighttime';
+  document.getElementById('stat-rain').textContent   = (rain > 0 || showers > 0) ? `${(rain + showers).toFixed(2)}"` : 'none';
+  document.getElementById('stat-points').textContent = dangerPoints.toFixed(1);
+  document.getElementById('stats-area').style.display = 'block';
+
+  const pillsHtml = dangerReasons.map(r => `<span class="danger-pill">${r}</span>`).join('');
+  const alertHtml = alertPills.map(r => `<span class="alert-pill">${r}</span>`).join('');
+
+  let verdictHtml;
+  if (dangerPoints <= 0) {
+    verdictHtml = `<p class="big-verdict verdict-go">it's perfect outside!</p><p style="color:#1D9E75;font-size:15px;">have fun on your ride :)</p>`;
+  } else if (dangerPoints <= 2) {
+    verdictHtml = `<p class="big-verdict verdict-caution">bike with caution</p><div class="dangers">${pillsHtml}${alertHtml}</div>`;
+  } else {
+    verdictHtml = `<p class="big-verdict verdict-nope">nope, stay in</p><div class="dangers">${pillsHtml}${alertHtml}</div>`;
+  }
+
+  setStatus(verdictHtml);
+  setBtn('recheck', false);
+}
+</script>
+</body>
+</html>
