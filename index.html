@@ -165,18 +165,27 @@ async function runCheck() {
 
   let lat = null, lon = null, locLabel = '';
 
-  // 1. Browser Geolocation API
+  // 1. Cloudflare-injected coords (if served via CF Worker) — no prompt needed
+  if (window._cfLat && window._cfLon) {
+    lat = parseFloat(window._cfLat);
+    lon = parseFloat(window._cfLon);
+    locLabel = `approx: ${lat.toFixed(3)}, ${lon.toFixed(3)} (cloudflare)`;
+  }
+
+  // 2. Browser Geolocation API fallback
   let geoHint = '';
-  try {
-    const pos = await new Promise((res, rej) =>
-      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
-    );
-    lat = pos.coords.latitude;
-    lon = pos.coords.longitude;
-    locLabel = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
-  } catch (e) {
-    if (e.code === 2) geoHint = '<p style="font-size:12px;color:#BA7517;margin-bottom:8px;">tip: tracking protection may be blocking geolocation — try disabling it for this site</p>';
-    else if (e.code === 1) geoHint = '<p style="font-size:12px;color:#BA7517;margin-bottom:8px;">tip: location access was denied — allow it in your browser settings</p>';
+  if (lat === null) {
+    try {
+      const pos = await new Promise((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
+      );
+      lat = pos.coords.latitude;
+      lon = pos.coords.longitude;
+      locLabel = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+    } catch (e) {
+      if (e.code === 2) geoHint = '<p style="font-size:12px;color:#BA7517;margin-bottom:8px;">tip: tracking protection may be blocking geolocation — try disabling it for this site</p>';
+      else if (e.code === 1) geoHint = '<p style="font-size:12px;color:#BA7517;margin-bottom:8px;">tip: location access was denied — allow it in your browser settings</p>';
+    }
   }
 
   // 2. Manual coordinate entry fallback
