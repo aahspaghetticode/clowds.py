@@ -166,6 +166,7 @@ async function runCheck() {
   let lat = null, lon = null, locLabel = '';
 
   // 1. Browser Geolocation API
+  let geoHint = '';
   try {
     const pos = await new Promise((res, rej) =>
       navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
@@ -173,24 +174,16 @@ async function runCheck() {
     lat = pos.coords.latitude;
     lon = pos.coords.longitude;
     locLabel = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
-  } catch (_) {}
-
-  // 2. ip-api.com — no API key required, CORS-friendly
-  if (lat === null) {
-    try {
-      const geo = await fetch('http://ip-api.com/json/?fields=status,lat,lon').then(r => r.json());
-      if (geo.status === 'success') {
-        lat = geo.lat;
-        lon = geo.lon;
-        locLabel = `approx: ${lat.toFixed(3)}, ${lon.toFixed(3)} (ip-based)`;
-      }
-    } catch (_) {}
+  } catch (e) {
+    if (e.code === 2) geoHint = '<p style="font-size:12px;color:#BA7517;margin-bottom:8px;">tip: tracking protection may be blocking geolocation — try disabling it for this site</p>';
+    else if (e.code === 1) geoHint = '<p style="font-size:12px;color:#BA7517;margin-bottom:8px;">tip: location access was denied — allow it in your browser settings</p>';
   }
 
-  // 3. Manual coordinate entry fallback
+  // 2. Manual coordinate entry fallback
   if (lat === null) {
     setStatus(`
       <p class="error-msg">couldn't auto-detect your location.<br>enter coordinates manually:</p>
+      ${geoHint}
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
         <input id="man-lat" type="number" step="any" placeholder="latitude">
         <input id="man-lon" type="number" step="any" placeholder="longitude">
